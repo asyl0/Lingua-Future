@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
-import { supabase } from '@/lib/supabase'
+import { supabase, DEMO_MODE } from '@/lib/supabase'
 import { Calendar, Link as LinkIcon, FileText } from 'lucide-react'
 
 export default function CreateTaskPage() {
@@ -41,7 +41,60 @@ export default function CreateTaskPage() {
     setError('')
 
     try {
-      // Create task
+      if (DEMO_MODE) {
+        // Demo mode: simulate task creation
+        console.log('Demo mode: Creating task with data:', formData)
+        
+        // Simulate processing time
+        await new Promise(resolve => setTimeout(resolve, 1500))
+        
+        // Store task in localStorage for demo purposes
+        const existingTasks = JSON.parse(localStorage.getItem('demo_tasks') || '[]')
+        const newTask = {
+          id: Date.now().toString(),
+          title: formData.title,
+          description: formData.description || null,
+          links: formData.links || null,
+          deadline: formData.deadline,
+          created_by: user?.id || 'demo-teacher',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          materials: [] as Array<{
+            id: string;
+            task_id: string;
+            file_name: string;
+            file_url: string;
+            file_type: string;
+            file_size: number;
+            created_at: string;
+          }>
+        }
+        
+        // Add file information if files were selected
+        if (selectedFiles && selectedFiles.length > 0) {
+          for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i]
+            newTask.materials.push({
+              id: `${Date.now()}-${i}`,
+              task_id: newTask.id,
+              file_name: file.name,
+              file_url: `demo://files/${file.name}`,
+              file_type: file.type,
+              file_size: file.size,
+              created_at: new Date().toISOString()
+            })
+          }
+        }
+        
+        existingTasks.push(newTask)
+        localStorage.setItem('demo_tasks', JSON.stringify(existingTasks))
+        
+        console.log('Demo task created successfully:', newTask)
+        router.push('/tasks')
+        return
+      }
+
+      // Real Supabase mode
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
         .insert({
@@ -49,7 +102,7 @@ export default function CreateTaskPage() {
           description: formData.description || null,
           links: formData.links || null,
           deadline: formData.deadline,
-          created_by: user.id,
+          created_by: user?.id,
         })
         .select()
         .single()
@@ -94,7 +147,8 @@ export default function CreateTaskPage() {
       }
 
       router.push('/tasks')
-    } catch {
+    } catch (error) {
+      console.error('Error creating task:', error)
       setError('An unexpected error occurred')
     } finally {
       setUploading(false)
@@ -114,6 +168,13 @@ export default function CreateTaskPage() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Create New Task</h1>
           <p className="mt-2 text-gray-600">Create a new assignment for your students.</p>
+          {DEMO_MODE && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800 text-sm">
+                <strong>Demo Mode:</strong> Tasks will be stored locally for demonstration purposes.
+              </p>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

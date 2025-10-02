@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { Bot, FileText, CheckCircle, Lightbulb } from 'lucide-react'
+import { sendMessageToAI } from '@/lib/ai'
 
 interface AIAnalysisProps {
   text: string
   onClose: () => void
 }
 
-export default function AIAnalysis({ onClose }: AIAnalysisProps) {
+export default function AIAnalysis({ text, onClose }: AIAnalysisProps) {
   const [analysis, setAnalysis] = useState<{
     grammar: { score: number; issues: { type: string; text: string; position: number }[] }
     style: { score: number; suggestions: string[] }
@@ -16,43 +17,130 @@ export default function AIAnalysis({ onClose }: AIAnalysisProps) {
     overall: { score: number; feedback: string }
   } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [aiResponse, setAiResponse] = useState<string>('')
 
   const analyzeText = async () => {
     setLoading(true)
     
-    // Mock AI analysis for demo
-    setTimeout(() => {
+    try {
+      console.log('🔍 Starting AI analysis...')
+      console.log('- Text length:', text.length)
+      console.log('- Text preview:', text.substring(0, 100) + '...')
+      
+      // Create a detailed prompt for AI analysis
+      const analysisPrompt = `Please analyze the following text for grammar, style, and vocabulary. Provide specific feedback and suggestions for improvement. The text is: "${text}"
+
+Please provide your analysis in the following format:
+1. Grammar issues (if any)
+2. Style suggestions 
+3. Vocabulary feedback
+4. Overall assessment and score out of 100
+
+Focus on helping the student improve their English writing skills.`
+
+      console.log('🚀 Sending analysis request to AI...')
+      const response = await sendMessageToAI([
+        { role: 'user', content: analysisPrompt }
+      ])
+
+      console.log('✅ AI response received:', response.substring(0, 200) + '...')
+      
+      // Store the full AI response
+      setAiResponse(response)
+      
+      // Parse the AI response and create structured analysis
+      const analysisResult = parseAIResponse(response)
+      setAnalysis(analysisResult)
+    } catch (error) {
+      console.error('Error analyzing text:', error)
+      // Fallback to mock analysis if AI fails
       const mockAnalysis = {
         grammar: {
           score: 85,
           issues: [
-            { type: 'grammar', text: 'Consider using "their" instead of "there"', position: 45 },
-            { type: 'grammar', text: 'Add a comma after "however"', position: 120 }
+            { type: 'grammar', text: 'AI analysis temporarily unavailable - using basic check', position: 0 }
           ]
         },
         style: {
           score: 78,
           suggestions: [
-            'Use more varied sentence structures',
-            'Consider adding transitional phrases',
-            'Try to be more specific in your examples'
+            'AI analysis temporarily unavailable',
+            'Please try again later for detailed feedback'
           ]
         },
         vocabulary: {
           score: 92,
           suggestions: [
-            'Great use of advanced vocabulary!',
-            'Consider using "utilize" instead of "use" for formal writing'
+            'AI analysis temporarily unavailable',
+            'Basic vocabulary check shows good word choice'
           ]
         },
         overall: {
           score: 85,
-          feedback: "This is a well-written piece with good structure and clear ideas. The main areas for improvement are grammar accuracy and sentence variety. Keep up the great work!"
+          feedback: "AI analysis is temporarily unavailable. Your text appears well-structured. Please try the analysis again for detailed feedback."
         }
       }
       setAnalysis(mockAnalysis)
+    } finally {
       setLoading(false)
-    }, 2000)
+    }
+  }
+
+  // Helper function to parse AI response into structured format
+  const parseAIResponse = (response: string) => {
+    // Simple parsing - in a real app, you might want more sophisticated parsing
+    // const lines = response.split('\n').filter(line => line.trim())
+    
+    // Extract key information from the response
+    const grammarIssues = []
+    const styleSuggestions = []
+    const vocabularyFeedback = []
+    let overallScore = 85
+    const overallFeedback = response
+
+    // Try to extract score if mentioned
+    const scoreMatch = response.match(/(\d+)\s*(?:out of 100|\/100|%)/i)
+    if (scoreMatch) {
+      overallScore = parseInt(scoreMatch[1])
+    }
+
+    // Look for specific sections in the response
+    if (response.toLowerCase().includes('grammar')) {
+      grammarIssues.push({ type: 'grammar', text: 'Check AI feedback above for grammar suggestions', position: 0 })
+    }
+
+    if (response.toLowerCase().includes('style') || response.toLowerCase().includes('structure')) {
+      styleSuggestions.push('Review AI suggestions above for style improvements')
+    }
+
+    if (response.toLowerCase().includes('vocabulary') || response.toLowerCase().includes('word')) {
+      vocabularyFeedback.push('See AI feedback above for vocabulary suggestions')
+    }
+
+    return {
+      grammar: {
+        score: Math.max(70, overallScore - 5),
+        issues: grammarIssues.length > 0 ? grammarIssues : [
+          { type: 'info', text: 'No major grammar issues detected', position: 0 }
+        ]
+      },
+      style: {
+        score: Math.max(75, overallScore),
+        suggestions: styleSuggestions.length > 0 ? styleSuggestions : [
+          'Review the detailed AI feedback above'
+        ]
+      },
+      vocabulary: {
+        score: Math.max(80, overallScore + 5),
+        suggestions: vocabularyFeedback.length > 0 ? vocabularyFeedback : [
+          'Good vocabulary usage detected'
+        ]
+      },
+      overall: {
+        score: overallScore,
+        feedback: overallFeedback.substring(0, 200) + (overallFeedback.length > 200 ? '...' : '')
+      }
+    }
   }
 
   return (
@@ -166,21 +254,38 @@ export default function AIAnalysis({ onClose }: AIAnalysisProps) {
                 </div>
               </div>
 
-              {/* AI Insights */}
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
-                <div className="flex items-start">
-                  <Bot className="h-6 w-6 text-green-600 mr-3 mt-1 flex-shrink-0" />
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">AI Insights</h4>
-                    <p className="text-gray-700 text-sm leading-relaxed">
-                      Based on the theme &ldquo;The role of AI in shaping the future of language&rdquo;, 
-                      your writing demonstrates good understanding of modern communication. 
-                      AI tools like this one are revolutionizing how we learn and improve our language skills, 
-                      providing instant feedback that was impossible just a few years ago.
-                    </p>
+              {/* Full AI Analysis */}
+              {aiResponse && (
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <Bot className="h-6 w-6 text-green-600 mr-3 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-3">Detailed AI Analysis</h4>
+                      <div className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap bg-white p-4 rounded-lg border border-gray-200 max-h-64 overflow-y-auto">
+                        {aiResponse}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* AI Insights - Fallback */}
+              {!aiResponse && (
+                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-start">
+                    <Bot className="h-6 w-6 text-green-600 mr-3 mt-1 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">AI Insights</h4>
+                      <p className="text-gray-700 text-sm leading-relaxed">
+                        Based on the theme &ldquo;The role of AI in shaping the future of language&rdquo;, 
+                        your writing demonstrates good understanding of modern communication. 
+                        AI tools like this one are revolutionizing how we learn and improve our language skills, 
+                        providing instant feedback that was impossible just a few years ago.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

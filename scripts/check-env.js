@@ -9,7 +9,7 @@ const requiredVars = [
 ];
 
 const optionalVars = [
-  'OPENROUTER_API_KEY'
+  'NEXT_PUBLIC_OPENROUTER_API_KEY'
 ];
 
 console.log('\n📋 Required Variables:');

@@ -4,17 +4,20 @@ export interface ChatMessage {
 }
 
 export async function sendMessageToAI(messages: ChatMessage[]): Promise<string> {
-  // Check if API key is available
+  // Check if API key is available - use window check for client-side
   const apiKey = process.env.NEXT_PUBLIC_OPENROUTER_API_KEY
   
   console.log('🔍 AI Debug Info:')
   console.log('- API Key available:', !!apiKey)
   console.log('- API Key length:', apiKey ? apiKey.length : 0)
+  console.log('- API Key starts with:', apiKey ? apiKey.substring(0, 10) + '...' : 'N/A')
   console.log('- Messages count:', messages.length)
   console.log('- Last message:', messages[messages.length - 1]?.content)
+  console.log('- Environment check:', typeof window !== 'undefined' ? 'Client' : 'Server')
   
-  if (!apiKey || apiKey === 'your_openrouter_api_key_here' || apiKey === 'sk-or-v1-ca9') {
-    console.log('⚠️ Using mock AI response - API key not configured')
+  if (!apiKey || apiKey === 'your_openrouter_api_key_here' || apiKey === 'sk-or-v1-ca9' || apiKey.length < 20) {
+    console.log('⚠️ Using mock AI response - API key not configured properly')
+    console.log('- API key value:', apiKey)
     return getMockAIResponse(messages[messages.length - 1]?.content || '')
   }
 
@@ -26,11 +29,11 @@ export async function sendMessageToAI(messages: ChatMessage[]): Promise<string> 
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.origin,
+        'HTTP-Referer': typeof window !== 'undefined' ? window.location.origin : 'https://localhost:3000',
         'X-Title': 'Lingua Future',
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-3.1-8b-instruct:free',
+        model: 'openai/gpt-4o-mini',
         messages: [
           {
             role: 'system',

@@ -366,9 +366,25 @@ export default function TaskDetailPage() {
                   <Bot className="h-6 w-6 text-purple-600 mr-2" />
                   <h2 className="text-xl font-semibold text-gray-900">AI Writing Assistant</h2>
                 </div>
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                  Powered by AI
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                    Powered by AI
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    process.env.NEXT_PUBLIC_OPENROUTER_API_KEY && 
+                    process.env.NEXT_PUBLIC_OPENROUTER_API_KEY !== 'your_openrouter_api_key_here' &&
+                    process.env.NEXT_PUBLIC_OPENROUTER_API_KEY.length > 20
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {process.env.NEXT_PUBLIC_OPENROUTER_API_KEY && 
+                     process.env.NEXT_PUBLIC_OPENROUTER_API_KEY !== 'your_openrouter_api_key_here' &&
+                     process.env.NEXT_PUBLIC_OPENROUTER_API_KEY.length > 20
+                      ? 'API Connected' 
+                      : 'Demo Mode'
+                    }
+                  </span>
+                </div>
               </div>
               <p className="text-gray-600 mb-4">
                 Get instant AI feedback on your writing. Paste your text below and let AI analyze grammar, style, and vocabulary.

@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 import Layout from '@/components/Layout'
-// import { supabase } from '@/lib/supabase' // Not used in mock version
+import { supabase, DEMO_MODE } from '@/lib/supabase'
 import { Task, TaskMaterial } from '@/types/database'
 import { Calendar, FileText, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
@@ -17,35 +17,58 @@ export default function TasksPage() {
 
   const fetchTasks = useCallback(async () => {
     try {
-      // For now, use mock data to avoid database issues
-      const mockTasks = [
-        {
-          id: '1',
-          title: 'Sample Task 1',
-          description: 'This is a sample task for testing',
-          deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          links: 'https://example.com',
-          created_by: 'teacher-1',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          materials: []
-        },
-        {
-          id: '2',
-          title: 'Sample Task 2',
-          description: 'Another sample task',
-          deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-          links: null,
-          created_by: 'teacher-1',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          materials: []
+      if (DEMO_MODE) {
+        // Demo mode: get tasks from localStorage and add default mock tasks
+        const storedTasks = JSON.parse(localStorage.getItem('demo_tasks') || '[]')
+        
+        const defaultMockTasks = [
+          {
+            id: '1',
+            title: 'Sample Task 1',
+            description: 'This is a sample task for testing',
+            deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            links: 'https://example.com',
+            created_by: 'teacher-1',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            materials: []
+          },
+          {
+            id: '2',
+            title: 'Sample Task 2',
+            description: 'Another sample task',
+            deadline: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+            links: null,
+            created_by: 'teacher-1',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            materials: []
+          }
+        ]
+        
+        // Combine stored tasks with default mock tasks, avoiding duplicates
+        const allTasks = [...defaultMockTasks, ...storedTasks]
+        setTasks(allTasks)
+      } else {
+        // Real Supabase mode
+        const { data: tasksData, error } = await supabase
+          .from('tasks')
+          .select(`
+            *,
+            materials:task_materials(*)
+          `)
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching tasks:', error)
+          setTasks([])
+        } else {
+          setTasks(tasksData || [])
         }
-      ]
-      
-      setTasks(mockTasks)
+      }
     } catch (error) {
       console.error('Error fetching tasks:', error)
+      setTasks([])
     } finally {
       setLoadingTasks(false)
     }
